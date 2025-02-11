@@ -18,17 +18,21 @@ fn main() -> Result<(), io::Error> {
     let mut sim = simulation::Simulation::new();
 
     for _step in 0..300 {
+        // Effacer la visibilité précédente
+        sim.map.fade_visibility();
+
         // Mise à jour des robots existants
         for robot in &mut sim.robots {
-            // 1) Déplacement avec collision
+            // Mettre à jour la visibilité autour du robot
+            sim.map.update_visibility(robot.x, robot.y, 2);  // Rayon de vision de 2
+
             robot.random_move(&sim.map);
-
-            // 2) Tenter de récupérer la ressource sur la case actuelle
             robot.try_gather_resource(&mut sim.map);
-
-            // 3) Tenter de déposer à la station (maintenant au centre)
             robot.try_deposit_resources(&mut sim.station, &sim.map);
         }
+
+        // Toujours garder la base visible
+        sim.map.update_visibility(sim.map.config.width / 2, sim.map.config.height / 2, 3);
 
         // Vérifier si on peut créer un nouveau robot
         if let Some(new_robot) = sim.station.try_create_robot() {

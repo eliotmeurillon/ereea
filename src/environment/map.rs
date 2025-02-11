@@ -25,6 +25,14 @@ pub enum CellType {
 pub struct Map {
     pub config: MapConfig,
     pub cells: Vec<Vec<CellType>>, // 2D grid
+    pub visibility: Vec<Vec<CellVisibility>>,  // Nouvelle grille pour la visibilité
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum CellVisibility {
+    Hidden,
+    Visible,
+    Explored,
 }
 
 impl Map {
@@ -33,11 +41,18 @@ impl Map {
         let mut map = Map {
             config: config.clone(),
             cells: vec![vec![CellType::Empty; config.width]; config.height],
+            visibility: vec![vec![CellVisibility::Hidden; config.width]; config.height],
         };
 
         map.generate_terrain();
         map.clear_base_area();
         map.place_resources();
+
+        // Rendre la base et son voisinage visible initialement
+        let center_x = config.width / 2;
+        let center_y = config.height / 2;
+        map.update_visibility(center_x, center_y, 3);  // Rayon de 3 autour de la base
+
         map
     }
 
@@ -252,5 +267,34 @@ impl Map {
             return false;
         }
         self.cells[y][x] != CellType::Obstacle
+    }
+
+    pub fn update_visibility(&mut self, x: usize, y: usize, radius: i32) {
+        for dy in -radius..=radius {
+            for dx in -radius..=radius {
+                let new_x = x as i32 + dx;
+                let new_y = y as i32 + dy;
+
+                if new_x >= 0 && new_x < self.config.width as i32 &&
+                   new_y >= 0 && new_y < self.config.height as i32 {
+                    let distance = ((dx * dx + dy * dy) as f32).sqrt();
+                    if distance <= radius as f32 {
+                        let nx = new_x as usize;
+                        let ny = new_y as usize;
+                        self.visibility[ny][nx] = CellVisibility::Visible;
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn fade_visibility(&mut self) {
+        for y in 0..self.config.height {
+            for x in 0..self.config.width {
+                if self.visibility[y][x] == CellVisibility::Visible {
+                    self.visibility[y][x] = CellVisibility::Explored;
+                }
+            }
+        }
     }
 }

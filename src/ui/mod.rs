@@ -14,7 +14,7 @@ use crossterm::{
 use std::io;
 
 use crate::simulation::Simulation;
-use crate::environment::map::CellType;
+use crate::environment::map::{CellType, CellVisibility};
 
 pub struct Ui {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
@@ -69,29 +69,46 @@ impl Ui {
             // Create a canvas for the map
             let map_widget = Canvas::default()
                 .paint(|ctx| {
-                    // Adjust scaling to account for terminal cell aspect ratio
                     let cell_width = (inner_area.width as f64 - 2.0) / simulation.map.config.width as f64;
-                    let cell_height = (inner_area.height as f64 - 1.0) / simulation.map.config.height as f64;  // Subtract 1 for bottom border
+                    let cell_height = (inner_area.height as f64 - 1.0) / simulation.map.config.height as f64;
 
                     // Draw map cells
                     for y in 0..simulation.map.config.height {
                         for x in 0..simulation.map.config.width {
-                            let (char, style) = match simulation.map.cells[y][x] {
+                            let (char, mut style) = match simulation.map.cells[y][x] {
                                 CellType::Empty => ('.', Style::default().fg(Color::DarkGray)),
                                 CellType::Obstacle => ('█', Style::default().fg(Color::Red)),
                                 CellType::Energy => ('⚡', Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
                                 CellType::Mineral => ('◆', Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
                                 CellType::ScientificSite => ('✧', Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
                             };
-                            
-                            let scaled_x = x as f64 * cell_width;
-                            let scaled_y = y as f64 * cell_height;
-                            
-                            ctx.print(
-                                scaled_x, 
-                                scaled_y,
-                                Span::styled(char.to_string(), style).to_string(),
-                            );
+
+                            // Ajuster le style en fonction de la visibilité
+                            match simulation.map.visibility[y][x] {
+                                CellVisibility::Hidden => {
+                                    style = Style::default().fg(Color::Black).bg(Color::Black);
+                                    ctx.print(
+                                        x as f64 * cell_width,
+                                        y as f64 * cell_height,
+                                        Span::styled("█", style).to_string(),
+                                    );
+                                },
+                                CellVisibility::Explored => {
+                                    style = style.fg(Color::DarkGray);
+                                    ctx.print(
+                                        x as f64 * cell_width,
+                                        y as f64 * cell_height,
+                                        Span::styled(char.to_string(), style).to_string(),
+                                    );
+                                },
+                                CellVisibility::Visible => {
+                                    ctx.print(
+                                        x as f64 * cell_width,
+                                        y as f64 * cell_height,
+                                        Span::styled(char.to_string(), style).to_string(),
+                                    );
+                                },
+                            }
                         }
                     }
 
