@@ -26,6 +26,8 @@ pub struct Robot {
     pub carried_energy: u32,
     pub carried_minerals: u32,
     pub carried_scientific_data: u32,
+    last_dx: i32,  // Nouvelle variable pour l'inertie
+    last_dy: i32,  // Nouvelle variable pour l'inertie
 }
 
 impl Robot {
@@ -40,6 +42,8 @@ impl Robot {
             carried_energy: 0,
             carried_minerals: 0,
             carried_scientific_data: 0,
+            last_dx: 0,
+            last_dy: 0,
         }
     }
 
@@ -89,22 +93,38 @@ impl Robot {
         let center_y = map.config.height / 2;
 
         if self.should_return_to_base() {
-            // Only move towards base if not already adjacent
+            // Si on doit retourner à la base, on se dirige vers elle
             if !self.is_near_base(center_x, center_y) {
                 self.move_towards(center_x, center_y, map);
             }
         } else {
-            // Random exploration when not carrying resources
             let mut rng = rand::thread_rng();
+            
+            // 80% de chance de continuer dans la même direction
+            if rng.gen_bool(0.8) && (self.last_dx != 0 || self.last_dy != 0) {
+                let new_x = (self.x as i32 + self.last_dx).clamp(0, map.config.width as i32 - 1) as usize;
+                let new_y = (self.y as i32 + self.last_dy).clamp(0, map.config.height as i32 - 1) as usize;
+
+                if map.is_walkable(new_x, new_y) {
+                    self.x = new_x;
+                    self.y = new_y;
+                    return;
+                }
+            }
+
+            // Si on ne peut pas continuer dans la même direction ou si on change de direction
+            // Générer une nouvelle direction avec des changements plus doux
             let dx = rng.gen_range(-1..=1);
             let dy = rng.gen_range(-1..=1);
 
-            let new_x = (self.x as isize + dx).clamp(0, map.config.width as isize - 1) as usize;
-            let new_y = (self.y as isize + dy).clamp(0, map.config.height as isize - 1) as usize;
+            let new_x = (self.x as i32 + dx).clamp(0, map.config.width as i32 - 1) as usize;
+            let new_y = (self.y as i32 + dy).clamp(0, map.config.height as i32 - 1) as usize;
 
             if map.is_walkable(new_x, new_y) {
                 self.x = new_x;
                 self.y = new_y;
+                self.last_dx = dx;
+                self.last_dy = dy;
             }
         }
     }
