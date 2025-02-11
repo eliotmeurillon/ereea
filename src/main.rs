@@ -17,7 +17,8 @@ fn main() -> Result<(), io::Error> {
     let mut ui = ui::Ui::new()?;
     let mut sim = simulation::Simulation::new();
 
-    for _step in 0..100 {
+    for _step in 0..300 {
+        // Mise à jour des robots existants
         for robot in &mut sim.robots {
             // 1) Déplacement avec collision
             robot.random_move(&sim.map);
@@ -27,6 +28,12 @@ fn main() -> Result<(), io::Error> {
 
             // 3) Tenter de déposer à la station (maintenant au centre)
             robot.try_deposit_resources(&mut sim.station, &sim.map);
+        }
+
+        // Vérifier si on peut créer un nouveau robot
+        if let Some(new_robot) = sim.station.try_create_robot() {
+            info!("Nouveau robot créé! ID: {}", new_robot.id);
+            sim.robots.push(new_robot);
         }
 
         // Affichage
