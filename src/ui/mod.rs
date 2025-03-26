@@ -17,6 +17,29 @@ use crate::environment::map::{CellType, CellVisibility};
 use crate::robot::RobotModule;
 use crate::simulation::Simulation;
 
+// A struct to represent how a cell should be displayed
+#[derive(Clone)]
+enum CellDisplay {
+    Char(char, Style),
+    Str(&'static str, Style),
+}
+
+impl CellDisplay {
+    fn is_empty(&self) -> bool {
+        match self {
+            CellDisplay::Char(c, _) => *c == ' ',
+            CellDisplay::Str(s, _) => s.is_empty(),
+        }
+    }
+
+    fn to_styled_string(&self) -> String {
+        match self {
+            CellDisplay::Char(c, style) => Span::styled(c.to_string(), *style).to_string(),
+            CellDisplay::Str(s, style) => Span::styled(s.to_string(), *style).to_string(),
+        }
+    }
+}
+
 pub struct Ui {
     terminal: Terminal<CrosstermBackend<io::Stdout>>,
 }
@@ -100,61 +123,43 @@ impl Ui {
                     // Draw map cells
                     for y in 0..simulation.map.config.height {
                         for x in 0..simulation.map.config.width {
-                            let (char, mut style) = match simulation.map.cells[y][x] {
-                                CellType::Empty => ('.', Style::default().fg(Color::Indexed(245))),
-                                CellType::Obstacle => {
-                                    ('#', Style::default().fg(Color::Rgb(100, 40, 40)))
+                            // Get the appropriate character and style based on cell type and visibility
+                            let cell_display = match simulation.map.visibility[y][x] {
+                                CellVisibility::Hidden => {
+                                    // Colored fog for hidden areas
+                                    CellDisplay::Char('▓', Style::default().fg(Color::Rgb(30, 30, 50)).bg(Color::Rgb(10, 10, 20)))
                                 }
-                                CellType::Energy => (
-                                    '⚡',
-                                    Style::default()
-                                        .fg(Color::Indexed(226))
-                                        .add_modifier(Modifier::BOLD),
-                                ),
-                                CellType::Mineral => (
-                                    '💎',
-                                    Style::default()
-                                        .fg(Color::Indexed(51))
-                                        .add_modifier(Modifier::BOLD),
-                                ),
-                                CellType::ScientificSite => (
-                                    '🔬',
-                                    Style::default()
-                                        .fg(Color::Indexed(201))
-                                        .add_modifier(Modifier::BOLD),
-                                ),
+                                CellVisibility::Explored => {
+                                    match simulation.map.cells[y][x] {
+                                        CellType::Empty => CellDisplay::Char(' ', Style::default()), // Transparent floor
+                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(80, 80, 80))), // Faded mountain emoji
+                                        CellType::Energy => CellDisplay::Char('⚡', Style::default().fg(Color::Rgb(80, 80, 0))),
+                                        CellType::Mineral => CellDisplay::Char('💎', Style::default().fg(Color::Rgb(20, 50, 50))),
+                                        CellType::ScientificSite => CellDisplay::Char('🔬', Style::default().fg(Color::Rgb(80, 40, 80))),
+                                    }
+                                }
+                                CellVisibility::Visible => {
+                                    match simulation.map.cells[y][x] {
+                                        CellType::Empty => CellDisplay::Char(' ', Style::default()), // Transparent floor
+                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(160, 120, 90))), // Mountain emoji
+                                        CellType::Energy => CellDisplay::Char('⚡', Style::default().fg(Color::Indexed(226)).add_modifier(Modifier::BOLD)),
+                                        CellType::Mineral => CellDisplay::Char('💎', Style::default().fg(Color::Indexed(51)).add_modifier(Modifier::BOLD)),
+                                        CellType::ScientificSite => CellDisplay::Char('🔬', Style::default().fg(Color::Indexed(201)).add_modifier(Modifier::BOLD)),
+                                    }
+                                }
                             };
 
                             // Calculate position using fixed spacing
                             let pos_x = offset_x + (x as f64 * cell_spacing_x);
                             let pos_y = offset_y + (y as f64 * cell_spacing_y);
 
-                            match simulation.map.visibility[y][x] {
-                                CellVisibility::Hidden => {
-                                    style = Style::default()
-                                        .fg(Color::Rgb(0, 0, 0))
-                                        .bg(Color::Rgb(0, 0, 0));
-                                    ctx.print(
-                                        pos_x,
-                                        pos_y,
-                                        Span::styled(" ", style).to_string(),
-                                    );
-                                }
-                                CellVisibility::Explored => {
-                                    style = style.fg(Color::Rgb(40, 40, 40));
-                                    ctx.print(
-                                        pos_x,
-                                        pos_y,
-                                        Span::styled(char.to_string(), style).to_string(),
-                                    );
-                                }
-                                CellVisibility::Visible => {
-                                    ctx.print(
-                                        pos_x,
-                                        pos_y,
-                                        Span::styled(char.to_string(), style).to_string(),
-                                    );
-                                }
+                            // Only print if there's something to display
+                            if !cell_display.is_empty() {
+                                ctx.print(
+                                    pos_x,
+                                    pos_y,
+                                    cell_display.to_styled_string(),
+                                );
                             }
                         }
                     }
