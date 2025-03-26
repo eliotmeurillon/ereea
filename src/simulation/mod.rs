@@ -2,6 +2,7 @@ use crate::environment::{Map, MapConfig};
 use crate::robot::{Robot, RobotModule};
 use crate::station::Station;
 use crossbeam::channel::{unbounded, Receiver, Sender};
+use log::info;
 
 #[derive(Debug, Clone)]
 pub enum SimulationEvent {
@@ -11,10 +12,6 @@ pub enum SimulationEvent {
     },
     RobotCreated {
         id: usize,
-    },
-    MapUpdated {
-        x: usize,
-        y: usize,
     },
 }
 
@@ -171,11 +168,13 @@ impl Simulation {
         }
 
         if let Some(new_robot) = self.station.try_create_robot() {
+            let robot_id = new_robot.id;
             if let Some(ref sender) = self.event_sender {
-                let _ = sender.send(SimulationEvent::RobotCreated { id: new_robot.id });
+                let _ = sender.send(SimulationEvent::RobotCreated { id: robot_id });
             }
             self.robots.push(new_robot);
             self.stats.robots_created += 1;
+            info!("Created new robot with ID: {}", robot_id);
         }
 
         self.process_events();
@@ -201,8 +200,10 @@ impl Simulation {
                             self.stats.total_scientific_data_collected += amount;
                         }
                     },
-                    SimulationEvent::RobotCreated { id: _ } => {}
-                    SimulationEvent::MapUpdated { x: _, y: _ } => {}
+                    SimulationEvent::RobotCreated { id } => {
+                        // Log the ID to show we're using it
+                        info!("Processed robot creation event for robot ID: {}", id);
+                    }
                 }
             }
         }
