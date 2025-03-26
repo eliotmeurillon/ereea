@@ -84,10 +84,18 @@ impl Ui {
 
             let map_widget = Canvas::default()
                 .paint(|ctx| {
-                    let cell_width =
-                        (inner_area.width as f64 - 2.0) / simulation.map.config.width as f64;
-                    let cell_height =
-                        (inner_area.height as f64 - 1.0) / simulation.map.config.height as f64;
+                    // Use fixed spacing for cells
+                    // Set a fixed spacing that works well in terminal
+                    let cell_spacing_x = 2.0; // Horizontal spacing between cells
+                    let cell_spacing_y = 1.0; // Vertical spacing between cells
+                    
+                    // Calculate total grid dimensions
+                    let grid_width = (simulation.map.config.width as f64 - 1.0) * cell_spacing_x;
+                    let grid_height = (simulation.map.config.height as f64 - 1.0) * cell_spacing_y;
+                    
+                    // Calculate offsets to center the grid in the available area
+                    let offset_x = (inner_area.width as f64 - grid_width) / 2.0;
+                    let offset_y = (inner_area.height as f64 - grid_height) / 2.0;
 
                     // Draw map cells
                     for y in 0..simulation.map.config.height {
@@ -117,29 +125,33 @@ impl Ui {
                                 ),
                             };
 
+                            // Calculate position using fixed spacing
+                            let pos_x = offset_x + (x as f64 * cell_spacing_x);
+                            let pos_y = offset_y + (y as f64 * cell_spacing_y);
+
                             match simulation.map.visibility[y][x] {
                                 CellVisibility::Hidden => {
                                     style = Style::default()
                                         .fg(Color::Rgb(0, 0, 0))
                                         .bg(Color::Rgb(0, 0, 0));
                                     ctx.print(
-                                        x as f64 * cell_width,
-                                        y as f64 * cell_height,
+                                        pos_x,
+                                        pos_y,
                                         Span::styled(" ", style).to_string(),
                                     );
                                 }
                                 CellVisibility::Explored => {
                                     style = style.fg(Color::Rgb(40, 40, 40));
                                     ctx.print(
-                                        x as f64 * cell_width,
-                                        y as f64 * cell_height,
+                                        pos_x,
+                                        pos_y,
                                         Span::styled(char.to_string(), style).to_string(),
                                     );
                                 }
                                 CellVisibility::Visible => {
                                     ctx.print(
-                                        x as f64 * cell_width,
-                                        y as f64 * cell_height,
+                                        pos_x,
+                                        pos_y,
                                         Span::styled(char.to_string(), style).to_string(),
                                     );
                                 }
@@ -147,9 +159,9 @@ impl Ui {
                         }
                     }
 
-                    // Draw the base station (draw it before robots to ensure robots are on top)
-                    let center_x = (simulation.map.config.width / 2) as f64 * cell_width;
-                    let center_y = (simulation.map.config.height / 2) as f64 * cell_height;
+                    // Draw the base station with the same positioning logic
+                    let center_x = offset_x + ((simulation.map.config.width / 2) as f64 * cell_spacing_x);
+                    let center_y = offset_y + ((simulation.map.config.height / 2) as f64 * cell_spacing_y);
 
                     ctx.print(
                         center_x,
@@ -165,8 +177,8 @@ impl Ui {
 
                     // Draw robots with different visuals based on their module
                     for robot in &simulation.robots {
-                        let scaled_x = robot.x as f64 * cell_width;
-                        let scaled_y = robot.y as f64 * cell_height;
+                        let scaled_x = offset_x + (robot.x as f64 * cell_spacing_x);
+                        let scaled_y = offset_y + (robot.y as f64 * cell_spacing_y);
 
                         // Different visual representation based on robot module
                         let (robot_char, robot_color) =
