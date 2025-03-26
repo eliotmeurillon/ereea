@@ -126,8 +126,8 @@ impl Ui {
                             // Get the appropriate character and style based on cell type and visibility
                             let cell_display = match simulation.map.visibility[y][x] {
                                 CellVisibility::Hidden => {
-                                    // Colored fog for hidden areas
-                                    CellDisplay::Char('▓', Style::default().fg(Color::Rgb(30, 30, 50)).bg(Color::Rgb(10, 10, 20)))
+                                    // Colored fog for hidden areas - using full block character to fill the entire cell
+                                    CellDisplay::Str("██", Style::default().fg(Color::Rgb(30, 30, 50)).bg(Color::Rgb(10, 10, 20)))
                                 }
                                 CellVisibility::Explored => {
                                     match simulation.map.cells[y][x] {
