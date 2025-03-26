@@ -1,8 +1,8 @@
 use ratatui::{
     backend::CrosstermBackend,
     layout::{Constraint, Direction, Layout},
-    style::{Color, Style, Modifier},
-    text::Span,
+    style::{Color, Style, Modifier, Stylize},
+    text::{Line, Span},
     widgets::{Block, Borders, Paragraph, canvas::Canvas},
     Terminal,
 };
@@ -48,25 +48,25 @@ impl Ui {
                 ].as_ref())
                 .split(frame.size());
 
-            // Draw status bar with enhanced styling
-            let status_widget = Paragraph::new(status_text.clone())
-                .block(Block::default()
-                    .title(Span::styled("Status", Style::default().add_modifier(Modifier::BOLD)))
-                    .borders(Borders::ALL)
-                    .style(Style::default().fg(Color::White)))
-                .style(Style::default().bg(Color::Blue));
+            // Status bar
+            let status_widget = Paragraph::new(Line::from(vec![
+                Span::styled(status_text, Style::default().fg(Color::White))
+            ]))
+            .block(Block::default()
+                .title(Span::styled("Status", Style::default().add_modifier(Modifier::BOLD)))
+                .borders(Borders::ALL))
+            .style(Style::default().bg(Color::Indexed(17)));  // Dark blue background
             frame.render_widget(status_widget, chunks[0]);
 
-            // Draw map with enhanced styling
+            // Map area
             let map_block = Block::default()
                 .title(Span::styled("Map", Style::default().add_modifier(Modifier::BOLD)))
-                .borders(Borders::ALL)
-                .style(Style::default().fg(Color::White));
+                .borders(Borders::ALL);
             
             let inner_area = map_block.inner(chunks[1]);
             frame.render_widget(map_block, chunks[1]);
 
-            // Create a canvas for the map
+            // Map content
             let map_widget = Canvas::default()
                 .paint(|ctx| {
                     let cell_width = (inner_area.width as f64 - 2.0) / simulation.map.config.width as f64;
@@ -76,25 +76,26 @@ impl Ui {
                     for y in 0..simulation.map.config.height {
                         for x in 0..simulation.map.config.width {
                             let (char, mut style) = match simulation.map.cells[y][x] {
-                                CellType::Empty => ('.', Style::default().fg(Color::DarkGray)),
-                                CellType::Obstacle => ('█', Style::default().fg(Color::Red)),
-                                CellType::Energy => ('⚡', Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
-                                CellType::Mineral => ('◆', Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
-                                CellType::ScientificSite => ('✧', Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+                                CellType::Empty => ('.', Style::default().fg(Color::Indexed(245))),  // Light gray
+                                CellType::Obstacle => ('#', Style::default().fg(Color::Rgb(100, 40, 40))),  // Dark reddish brown
+                                CellType::Energy => ('⚡', Style::default().fg(Color::Indexed(226)).add_modifier(Modifier::BOLD)),
+                                CellType::Mineral => ('💎', Style::default().fg(Color::Indexed(51)).add_modifier(Modifier::BOLD)),
+                                CellType::ScientificSite => ('🔬', Style::default().fg(Color::Indexed(201)).add_modifier(Modifier::BOLD)),
                             };
 
-                            // Ajuster le style en fonction de la visibilité
                             match simulation.map.visibility[y][x] {
                                 CellVisibility::Hidden => {
-                                    style = Style::default().fg(Color::Black).bg(Color::Black);
+                                    style = Style::default()
+                                        .fg(Color::Rgb(0, 0, 0))  // Pure black foreground
+                                        .bg(Color::Rgb(0, 0, 0)); // Pure black background
                                     ctx.print(
                                         x as f64 * cell_width,
                                         y as f64 * cell_height,
-                                        Span::styled("█", style).to_string(),
+                                        Span::styled(" ", style).to_string(),
                                     );
                                 },
                                 CellVisibility::Explored => {
-                                    style = style.fg(Color::DarkGray);
+                                    style = style.fg(Color::Rgb(40, 40, 40));  // Dark gray
                                     ctx.print(
                                         x as f64 * cell_width,
                                         y as f64 * cell_height,
@@ -112,7 +113,7 @@ impl Ui {
                         }
                     }
 
-                    // Draw robots with enhanced styling
+                    // Draw robots
                     for robot in &simulation.robots {
                         let scaled_x = robot.x as f64 * cell_width;
                         let scaled_y = robot.y as f64 * cell_height;
@@ -123,13 +124,13 @@ impl Ui {
                             Span::styled(
                                 "🤖",
                                 Style::default()
-                                    .fg(Color::LightGreen)
+                                    .fg(Color::Indexed(46))  // Bright green
                                     .add_modifier(Modifier::BOLD)
                             ).to_string(),
                         );
                     }
 
-                    // Draw the base station at the center with enhanced styling
+                    // Draw base
                     let center_x = (simulation.map.config.width / 2) as f64 * cell_width;
                     let center_y = (simulation.map.config.height / 2) as f64 * cell_height;
                     
@@ -139,7 +140,7 @@ impl Ui {
                         Span::styled(
                             "🏠",
                             Style::default()
-                                .fg(Color::White)
+                                .fg(Color::Indexed(231))  // Pure white
                                 .add_modifier(Modifier::BOLD)
                         ).to_string(),
                     );
@@ -149,6 +150,7 @@ impl Ui {
 
             frame.render_widget(map_widget, inner_area);
         })?;
+
         Ok(())
     }
 }
