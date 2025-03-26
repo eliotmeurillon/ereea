@@ -2,50 +2,70 @@ use env_logger;
 use log::info;
 
 mod environment;
-mod robot;
-mod station;
-mod simulation;
-mod ui;
 mod pathfinding;
+mod robot;
+mod simulation;
+mod station;
+mod ui;
 
-use std::{io, thread, time::Duration};
+use crossterm::event::{self, Event, KeyCode};
+use std::{io, time::Duration};
 
 fn main() -> Result<(), io::Error> {
     env_logger::init();
-    info!("Lancement de la simulation EREEA...");
+    info!("Starting EREEA simulation...");
 
     let mut ui = ui::Ui::new()?;
     let mut sim = simulation::Simulation::new();
 
-    for _step in 0..300 {
-        // Effacer la visibilité précédente
-        sim.map.fade_visibility();
+    let max_steps = 1000;
 
-        // Mise à jour des robots existants
-        for robot in &mut sim.robots {
-            // Mettre à jour la visibilité autour du robot
-            sim.map.update_visibility(robot.x, robot.y, 2);  // Rayon de vision de 2
+    loop {
+        sim.update();
 
-            robot.random_move(&sim.map);
-            robot.try_gather_resource(&mut sim.map);
-            robot.try_deposit_resources(&mut sim.station, &sim.map);
-        }
-
-        // Toujours garder la base visible
-        sim.map.update_visibility(sim.map.config.width / 2, sim.map.config.height / 2, 3);
-
-        // Vérifier si on peut créer un nouveau robot
-        if let Some(new_robot) = sim.station.try_create_robot() {
-            info!("Nouveau robot créé! ID: {}", new_robot.id);
-            sim.robots.push(new_robot);
-        }
-
-        // Affichage
         ui.draw(&sim)?;
-        thread::sleep(Duration::from_millis(100));
+
+        if crossterm::event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                match key.code {
+                    KeyCode::Char('q') => {
+                        info!("User requested exit. Terminating simulation.");
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if sim.stats.simulation_step >= max_steps {
+            info!(
+                "Reached maximum simulation steps ({}). Terminating.",
+                max_steps
+            );
+            break;
+        }
+
+        if sim.stats.simulation_step % 100 == 0 {
+            info!("Simulation step: {}", sim.stats.simulation_step);
+            info!("Robots: {}", sim.robots.len());
+            info!(
+                "Resources collected - Energy: {}, Minerals: {}, Scientific Data: {}",
+                sim.stats.total_energy_collected,
+                sim.stats.total_minerals_collected,
+                sim.stats.total_scientific_data_collected
+            );
+        }
     }
 
-    info!("Fin de la simulation.");
+    info!("Simulation complete. Final statistics:");
+    info!("Total steps: {}", sim.stats.simulation_step);
+    info!("Robots created: {}", sim.stats.robots_created);
+    info!(
+        "Resources collected - Energy: {}, Minerals: {}, Scientific Data: {}",
+        sim.stats.total_energy_collected,
+        sim.stats.total_minerals_collected,
+        sim.stats.total_scientific_data_collected
+    );
+
     Ok(())
 }
-

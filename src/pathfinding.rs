@@ -1,5 +1,5 @@
-use std::collections::{BinaryHeap, HashMap};
 use std::cmp::Ordering;
+use std::collections::{BinaryHeap, HashMap};
 
 use crate::environment::Map;
 
@@ -12,7 +12,6 @@ struct Node {
 
 impl Ord for Node {
     fn cmp(&self, other: &Self) -> Ordering {
-        // Reverse ordering because BinaryHeap is a max-heap
         other.f_score.cmp(&self.f_score)
     }
 }
@@ -23,13 +22,16 @@ impl PartialOrd for Node {
     }
 }
 
-pub fn find_path(map: &Map, start: (usize, usize), goal: (usize, usize)) -> Option<Vec<(usize, usize)>> {
+pub fn find_path(
+    map: &Map,
+    start: (usize, usize),
+    goal: (usize, usize),
+) -> Option<Vec<(usize, usize)>> {
     let mut open_set = BinaryHeap::new();
     let mut came_from = HashMap::new();
     let mut g_scores = HashMap::new();
     let mut f_scores = HashMap::new();
 
-    // Initialize start node
     g_scores.insert(start, 0);
     f_scores.insert(start, manhattan_distance(start, goal));
     open_set.push(Node {
@@ -43,7 +45,6 @@ pub fn find_path(map: &Map, start: (usize, usize), goal: (usize, usize)) -> Opti
             return Some(reconstruct_path(came_from, current.position));
         }
 
-        // Get neighbors
         for neighbor in get_neighbors(map, current.position) {
             let tentative_g_score = g_scores[&current.position] + 1;
 
@@ -52,7 +53,7 @@ pub fn find_path(map: &Map, start: (usize, usize), goal: (usize, usize)) -> Opti
                 g_scores.insert(neighbor, tentative_g_score);
                 let f_score = tentative_g_score + manhattan_distance(neighbor, goal);
                 f_scores.insert(neighbor, f_score);
-                
+
                 open_set.push(Node {
                     position: neighbor,
                     f_score,
@@ -62,7 +63,7 @@ pub fn find_path(map: &Map, start: (usize, usize), goal: (usize, usize)) -> Opti
         }
     }
 
-    None // No path found
+    None
 }
 
 fn manhattan_distance(a: (usize, usize), b: (usize, usize)) -> i32 {
@@ -71,14 +72,17 @@ fn manhattan_distance(a: (usize, usize), b: (usize, usize)) -> i32 {
 
 fn get_neighbors(map: &Map, pos: (usize, usize)) -> Vec<(usize, usize)> {
     let mut neighbors = Vec::new();
-    let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)]; // 4-directional movement
+    let directions = [(0, 1), (1, 0), (0, -1), (-1, 0)];
 
     for (dx, dy) in directions.iter() {
         let new_x = pos.0 as isize + dx;
         let new_y = pos.1 as isize + dy;
 
-        if new_x >= 0 && new_x < map.config.width as isize && 
-           new_y >= 0 && new_y < map.config.height as isize {
+        if new_x >= 0
+            && new_x < map.config.width as isize
+            && new_y >= 0
+            && new_y < map.config.height as isize
+        {
             let new_pos = (new_x as usize, new_y as usize);
             if map.is_walkable(new_pos.0, new_pos.1) {
                 neighbors.push(new_pos);
@@ -89,7 +93,10 @@ fn get_neighbors(map: &Map, pos: (usize, usize)) -> Vec<(usize, usize)> {
     neighbors
 }
 
-fn reconstruct_path(came_from: HashMap<(usize, usize), (usize, usize)>, mut current: (usize, usize)) -> Vec<(usize, usize)> {
+fn reconstruct_path(
+    came_from: HashMap<(usize, usize), (usize, usize)>,
+    mut current: (usize, usize),
+) -> Vec<(usize, usize)> {
     let mut path = vec![current];
     while let Some(&prev) = came_from.get(&current) {
         path.push(prev);
@@ -97,4 +104,4 @@ fn reconstruct_path(came_from: HashMap<(usize, usize), (usize, usize)>, mut curr
     }
     path.reverse();
     path
-} 
+}
