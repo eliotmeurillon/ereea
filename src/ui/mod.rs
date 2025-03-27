@@ -17,7 +17,6 @@ use crate::environment::map::{CellType, CellVisibility};
 use crate::robot::RobotModule;
 use crate::simulation::Simulation;
 
-// A struct to represent how a cell should be displayed
 #[derive(Clone)]
 enum CellDisplay {
     Char(char, Style),
@@ -66,19 +65,16 @@ impl Ui {
         );
 
         self.terminal.draw(|frame| {
-            // Create main layout with status bar at top, map and details panels below
             let main_layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Length(3), Constraint::Min(0)].as_ref())
                 .split(frame.size());
 
-            // Create horizontal layout for map and details panel
             let content_layout = Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(75), Constraint::Percentage(25)].as_ref())
                 .split(main_layout[1]);
 
-            // Render status bar
             let status_widget = Paragraph::new(Line::from(vec![Span::styled(
                 status_text,
                 Style::default().fg(Color::White),
@@ -94,7 +90,6 @@ impl Ui {
             .style(Style::default().bg(Color::Indexed(17)));
             frame.render_widget(status_widget, main_layout[0]);
 
-            // Render map
             let map_block = Block::default()
                 .title(Span::styled(
                     "Map",
@@ -107,32 +102,25 @@ impl Ui {
 
             let map_widget = Canvas::default()
                 .paint(|ctx| {
-                    // Use fixed spacing for cells
-                    // Set a fixed spacing that works well in terminal
-                    let cell_spacing_x = 2.0; // Horizontal spacing between cells
-                    let cell_spacing_y = 1.0; // Vertical spacing between cells
+                    let cell_spacing_x = 2.0; 
+                    let cell_spacing_y = 1.0; 
                     
-                    // Calculate total grid dimensions
                     let grid_width = (simulation.map.config.width as f64 - 1.0) * cell_spacing_x;
                     let grid_height = (simulation.map.config.height as f64 - 1.0) * cell_spacing_y;
                     
-                    // Calculate offsets to center the grid in the available area
                     let offset_x = (inner_area.width as f64 - grid_width) / 2.0;
                     let offset_y = (inner_area.height as f64 - grid_height) / 2.0;
 
-                    // Draw map cells
                     for y in 0..simulation.map.config.height {
                         for x in 0..simulation.map.config.width {
-                            // Get the appropriate character and style based on cell type and visibility
                             let cell_display = match simulation.map.visibility[y][x] {
                                 CellVisibility::Hidden => {
-                                    // Colored fog for hidden areas - using full block character to fill the entire cell
                                     CellDisplay::Str("▒▒", Style::default().fg(Color::Rgb(30, 30, 50)).bg(Color::Rgb(10, 10, 20)))
                                 }
                                 CellVisibility::Explored => {
                                     match simulation.map.cells[y][x] {
-                                        CellType::Empty => CellDisplay::Char(' ', Style::default()), // Transparent floor
-                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(80, 80, 80))), // Faded mountain emoji
+                                        CellType::Empty => CellDisplay::Char(' ', Style::default()),  
+                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(80, 80, 80))), 
                                         CellType::Energy => CellDisplay::Char('⚡', Style::default().fg(Color::Rgb(80, 80, 0))),
                                         CellType::Mineral => CellDisplay::Char('💎', Style::default().fg(Color::Rgb(20, 50, 50))),
                                         CellType::ScientificSite => CellDisplay::Char('🔬', Style::default().fg(Color::Rgb(80, 40, 80))),
@@ -140,8 +128,8 @@ impl Ui {
                                 }
                                 CellVisibility::Visible => {
                                     match simulation.map.cells[y][x] {
-                                        CellType::Empty => CellDisplay::Char(' ', Style::default()), // Transparent floor
-                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(160, 120, 90))), // Mountain emoji
+                                        CellType::Empty => CellDisplay::Char(' ', Style::default()), 
+                                        CellType::Obstacle => CellDisplay::Str("🏔️", Style::default().fg(Color::Rgb(160, 120, 90))),
                                         CellType::Energy => CellDisplay::Char('⚡', Style::default().fg(Color::Indexed(226)).add_modifier(Modifier::BOLD)),
                                         CellType::Mineral => CellDisplay::Char('💎', Style::default().fg(Color::Indexed(51)).add_modifier(Modifier::BOLD)),
                                         CellType::ScientificSite => CellDisplay::Char('🔬', Style::default().fg(Color::Indexed(201)).add_modifier(Modifier::BOLD)),
@@ -149,11 +137,9 @@ impl Ui {
                                 }
                             };
 
-                            // Calculate position using fixed spacing
                             let pos_x = offset_x + (x as f64 * cell_spacing_x);
                             let pos_y = offset_y + (y as f64 * cell_spacing_y);
 
-                            // Only print if there's something to display
                             if !cell_display.is_empty() {
                                 ctx.print(
                                     pos_x,
@@ -164,7 +150,6 @@ impl Ui {
                         }
                     }
 
-                    // Draw the base station with the same positioning logic
                     let center_x = offset_x + ((simulation.map.config.width / 2) as f64 * cell_spacing_x);
                     let center_y = offset_y + ((simulation.map.config.height / 2) as f64 * cell_spacing_y);
 
@@ -180,24 +165,21 @@ impl Ui {
                         .to_string(),
                     );
 
-                    // Draw robots with different visuals based on their module
                     for robot in &simulation.robots {
                         let scaled_x = offset_x + (robot.x as f64 * cell_spacing_x);
                         let scaled_y = offset_y + (robot.y as f64 * cell_spacing_y);
 
-                        // Different visual representation based on robot module
                         let (robot_char, robot_color) =
                             if robot.modules.contains(&RobotModule::Exploration) {
-                                ("🔍", Color::Indexed(86)) // Explorer robots - magnifying glass in cyan
+                                ("🔍", Color::Indexed(86)) 
                             } else if robot.modules.contains(&RobotModule::Drill) {
-                                ("⛏️", Color::Indexed(214)) // Drill robots - pickaxe in orange
+                                ("⛏️", Color::Indexed(214))
                             } else if robot.modules.contains(&RobotModule::EnergyCollector) {
-                                ("🔋", Color::Indexed(118)) // Energy collector - battery in green
+                                ("🔋", Color::Indexed(118)) 
                             } else {
-                                ("🤖", Color::Indexed(250)) // Generic robot in white
+                                ("🤖", Color::Indexed(250)) 
                             };
 
-                        // Add small indicator if robot is carrying resources
                         let carrying = robot.carried_energy > 0
                             || robot.carried_minerals > 0
                             || robot.carried_scientific_data > 0;
@@ -232,7 +214,6 @@ impl Ui {
                 )
                 .split(content_layout[1]);
 
-            // Render legend block
             let legend_block = Block::default()
                 .title(Span::styled(
                     "Legend",

@@ -201,7 +201,6 @@ impl Simulation {
                         }
                     },
                     SimulationEvent::RobotCreated { id } => {
-                        // Log the ID to show we're using it
                         info!("Processed robot creation event for robot ID: {}", id);
                     }
                 }
